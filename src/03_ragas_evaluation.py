@@ -207,7 +207,7 @@ def run_ragas_eval(rag_results: list, version: str) -> dict:
         raw_scores.update(checkpoint.get("raw_scores", {}))
         print(f"♻️  Tiếp tục RAGAS {version} từ sample {completed_samples}/50")
 
-    batch_size = 5
+    batch_size = 4
     for start in range(completed_samples, len(rag_results), batch_size):
         end = min(start + batch_size, len(rag_results))
         dataset = build_ragas_dataset(rag_results[start:end])
@@ -261,8 +261,17 @@ def main():
     if not config.validate():
         sys.exit(1)
 
-    # TODO: Tạo vectorstore
-    vectorstore = setup_vectorstore()
+    data_dir = Path(__file__).parent.parent / "data"
+    cache_paths = [data_dir / "rag_outputs_v1.json", data_dir / "rag_outputs_v2.json"]
+    caches_complete = all(
+        path.exists() and len(json.loads(path.read_text(encoding="utf-8"))) == len(QA_PAIRS)
+        for path in cache_paths
+    )
+    if caches_complete:
+        vectorstore = None
+        print("♻️  Bỏ qua FAISS: cache V1/V2 đã đủ 50 câu")
+    else:
+        vectorstore = setup_vectorstore()
 
     # Thu thập kết quả RAG cho cả V1 và V2
     v1_results = collect_rag_outputs(vectorstore, "v1")
